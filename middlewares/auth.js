@@ -44,6 +44,8 @@ const isReceptionist = async (req, res, next) => {
 }
 const isAdmin = async (req, res, next) => {
     const token = req.headers.authorization;
+    console.log(token);
+    console.log(req.headers);
     if (!token) {
         return res.status(401).json({ message: "Unauthorized" });
     }

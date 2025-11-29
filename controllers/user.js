@@ -36,6 +36,9 @@ const register = async (req, res) => {
 };
 // Login a user
 const login = async (req, res) => {
+  if (!req.body) {
+    return res.status(400).json({ message: "No data provided" });
+  }
   const { email, password } = req.body;
   try {
     // validate input
@@ -99,13 +102,13 @@ const updateUserById = async (req, res) => {
     const { name, password } = req.body;
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const update = await User.findByIdAndUpdate(user.id, { name, password: passwordHash }, {new: true}, );
-    data =  {
+    const update = await User.findByIdAndUpdate(user.id, { name, password: passwordHash }, { new: true },);
+    data = {
       name: update.name,
       email: update.email,
       role: update.role
     }
-    
+
     res.status(200).json({ message: "User updated successfully", data });
   } catch (error) {
     console.log("errer update user by id", error);
