@@ -1,6 +1,6 @@
-const {Router} = require("express");
+const { Router } = require("express");
 const router = Router();
-const {  } = require("../controllers/book");
+const { createBooking } = require("../controllers/book");
 const { isAuth, isAdmin } = require("../middlewares/auth");
-
+router.post("/book", isAuth, createBooking);
 module.exports = router;

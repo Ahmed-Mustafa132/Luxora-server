@@ -1,5 +1,4 @@
 const mongoose = require("mongoose")
-
 const bookSchema = new mongoose.Schema({
     user: {
         type: mongoose.Schema.Types.ObjectId,
@@ -7,7 +6,7 @@ const bookSchema = new mongoose.Schema({
         required: true
     },
     room: {
-        type: mongoose.Schema.type.ObjectId,
+        type: mongoose.Schema.Types.ObjectId,
         ref: "Room",
         required: true
     },
@@ -15,4 +14,5 @@ const bookSchema = new mongoose.Schema({
         type: Number,
         required: true
     }
-})
+}, { timestamps: true })
+module.exports = mongoose.model("Book", bookSchema)

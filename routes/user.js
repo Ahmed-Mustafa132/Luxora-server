@@ -3,9 +3,9 @@ const {
   register,
   login,
   getAllUsers,
-  getUserById,
+  getCorrentUser,
   deleteUserById,
-  updateUserById,
+  updateCorrentUser, getUserById
 } = require("../controllers/user");
 const { isAuth, isAdmin } = require("../middlewares/auth");
 const router = Router();
@@ -13,8 +13,9 @@ const router = Router();
 // user routes
 router.post("/register", register);
 router.post("/login", login);
-router.get("/me", isAuth, getUserById);
-router.put("/me", isAuth, updateUserById);
+router.get("/me", isAuth, getCorrentUser);
+router.put("/me", isAuth, updateCorrentUser);
+router.get("/user/:id", isAdmin, getUserById)
 router.get("/", isAdmin, getAllUsers);
 router.delete("/:id", isAdmin, deleteUserById);
 module.exports = router;

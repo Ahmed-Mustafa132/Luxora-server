@@ -3,10 +3,51 @@ const Room = require("../models/room");
 
 const createRoom = async (req, res) => {
   try {
-    const { roomNumber, price, amenities, roomType } = req.body;
-    if (!roomNumber || !price || !roomType) {
-      return res.status(400).json({ message: "All fields are required" });
+    let { roomNumber, price, amenities, roomType } = req.body;
+
+    if (!price || !roomType) {
+      return res.status(400).json({ message: "price and roomType are required" });
     }
+
+    if (!roomNumber) {
+
+      const agg = await Room.aggregate([
+        {
+          $addFields: {
+            _rn: {
+              $convert: {
+                input: "$roomNumber",
+                to: "int",
+                onError: null,
+                onNull: null,
+              },
+            },
+          },
+        },
+        { $match: { _rn: { $ne: null } } },
+        { $sort: { _rn: -1 } },
+        { $limit: 1 },
+      ]);
+
+      if (agg && agg.length > 0 && typeof agg[0]._rn === "number") {
+        roomNumber = String(agg[0]._rn + 1);
+      } else {
+        // fallback: استخدم جزء من الطابع الزمني لضمان فريدية مبدئية
+        roomNumber = String(Date.now()).slice(-6);
+      }
+
+      // تأكد من التفريد — حاول زيادات صغيرة إذا كان في تعارض
+      let attempts = 0;
+      while (await Room.findOne({ roomNumber }) && attempts < 50) {
+        // إذا صار تعارض زوّد بالرقم
+        roomNumber = String(Number(roomNumber) + 1);
+        attempts++;
+      }
+      if (attempts >= 50) {
+        return res.status(500).json({ message: "Failed to generate unique roomNumber" });
+      }
+    }
+
     const newRoom = new Room({ roomNumber, price, amenities, roomType });
     await newRoom.save();
     return res.status(201).json({ message: "Room created successfully", room: newRoom });

@@ -69,7 +69,6 @@ const login = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
-// ger all Users
 const getAllUsers = async (req, res) => {
   try {
     const users = await User.find({}, ["name", "email", "role"]);
@@ -79,11 +78,10 @@ const getAllUsers = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-// get user by  id
-const getUserById = async (req, res) => {
+const getCorrentUser = async (req, res) => {
   try {
     const user = req.user;
-    const userData = await User.findById(user.id, ["name", "email", "role"]);
+    const userData = await User.findById(user.id, ["name", "email", "role",]);
     data = {
       name: userData.name,
       email: userData.email,
@@ -95,8 +93,7 @@ const getUserById = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
-// update user by id
-const updateUserById = async (req, res) => {
+const updateCorrentUser = async (req, res) => {
   try {
     const user = req.user
     const { name, password } = req.body;
@@ -115,6 +112,20 @@ const updateUserById = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+const getUserById = async (req, res) => {
+  try {
+    const { id } = req.params
+    const userData = await User.findById(id, ["name", "email", "role",]);
+    data = {
+      name: userData.name,
+      email: userData.email,
+      role: userData.role,
+    }
+    res.status(200).json({ message: "get user success", data });
+  } catch (error) {
+    console.log("error on get user by id", error)
+  }
+}
 const deleteUserById = async (req, res) => {
   try {
     const { id } = req.user;
@@ -125,11 +136,12 @@ const deleteUserById = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
 module.exports = {
   register,
   login,
   getAllUsers,
-  getUserById,
-  updateUserById,
-  deleteUserById,
+  getCorrentUser,
+  updateCorrentUser,
+  getUserById, deleteUserById
 };
