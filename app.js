@@ -19,7 +19,7 @@ mongoose
 // Routes
 app.use("/api/room", require("./routes/room"));
 app.use("/api/user", require("./routes/user"));
-app.use("/api/book", require("./routes/book"));
+app.use("/api/book", require("./routes/booking"));
 
 // Error handling
 app.use((err, req, res, next) => {

@@ -6,7 +6,7 @@ const {
     getBooking,
     updateBooking,
     deleteBooking,
-} = require("../controllers/book");
+} = require("../controllers/booking");
 const { isAuth, isAdmin } = require("../middlewares/auth");
 
 // User create booking

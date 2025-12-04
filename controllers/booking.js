@@ -1,4 +1,4 @@
-const Book = require("../models/book");
+const Book = require("../models/booking");
 const Room = require("../models/room");
 const User = require("../models/user");
 const mongoose = require("mongoose");
