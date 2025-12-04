@@ -1,51 +1,150 @@
-const book = require("../models/book")
-const Room = require("../models/room")
+const Book = require("../models/book");
+const Room = require("../models/room");
+const User = require("../models/user");
+const mongoose = require("mongoose");
 
 const createBooking = async (req, res) => {
     try {
-        const user = req.user
-        const { checkIn, checkOut, guests } = req.body
-        // validator check for required fields
+        const user = req.user;
+        const { checkIn, checkOut, guests } = req.body;
         if (!checkIn || !checkOut || !guests) {
-            return res.status(400).json({ message: "All fields are required" })
+            return res.status(400).json({ message: "All fields are required" });
         }
         if (guests <= 0 || guests > 3) {
-            return res.status(400).json({ message: "Guests must be at least 1" })
+            return res.status(400).json({ message: "Guests must be at least 1" });
         }
         if (new Date(checkIn) >= new Date(checkOut)) {
-            return res.status(400).json({ message: "Check-out date must be after check-in date" })
+            return res.status(400).json({ message: "Check-out date must be after check-in date" });
         }
         if (new Date(checkIn) <= new Date()) {
-            return res.status(400).json({ message: "Check-in date must be in the future" })
+            return res.status(400).json({ message: "Check-in date must be in the future" });
         }
-        // Check room availability
-        const roomType = guests <= 1 ? "single" : guests == 2 ? "double" : guests == 3 ? "suite" : "deluxe";
-        console.log("roomType:", roomType)
-        const availableRoom = await Room.findOne({
-            roomType: roomType,
-            status: "available"
-        })
-        if (!availableRoom) {
-            return res.status(404).json({ message: "No available rooms of the selected type" })
-        }
-        // Create a new booking
-        const newBooking = new book({
-            user: user._id,
-            room: availableRoom._id,
-            maxOccupancy: guests
-        })
-        await newBooking.save()
-        // Update room status to booked
-        availableRoom.status = "booked"
-        await availableRoom.save()
 
-        res.status(201).json({ message: "Booking created successfully", booking: newBooking })
+        const roomType = guests <= 1 ? "single" : guests == 2 ? "double" : guests == 3 ? "suite" : "deluxe";
+
+        // If admin provides roomId or userId (admin route may use different fields)
+        let roomQuery = { roomType: roomType, status: "available" };
+        if (req.body.roomId) roomQuery = { _id: mongoose.Types.ObjectId(req.body.roomId) };
+
+        const availableRoom = await Room.findOne(roomQuery);
+        if (!availableRoom) {
+            return res.status(404).json({ message: "No available rooms of the selected type" });
+        }
+
+        const bookingUserId = req.body.userId ? req.body.userId : user?._id;
+        const newBooking = new Book({
+            user: bookingUserId,
+            room: availableRoom._id,
+            checkIn,
+            checkOut,
+            maxOccupancy: guests,
+            status: req.body.status || "confirmed"
+        });
+        await newBooking.save();
+
+        // Update room status to booked
+        availableRoom.status = "booked";
+        await availableRoom.save();
+
+        res.status(201).json({ message: "Booking created successfully", booking: newBooking });
     } catch (error) {
-        console.log("error in book controller:", error)
-        res.status(500).json({ message: "Server error" })
+        console.log("error in book controller:", error);
+        res.status(500).json({ message: "Server error" });
     }
-}
+};
+
+const getBookings = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const skip = (page - 1) * limit;
+        const filter = {};
+        if (req.query.status) filter.status = req.query.status;
+        if (req.query.userId) filter.user = req.query.userId;
+        if (req.query.q) {
+            const q = req.query.q;
+            // search by room number or user email fallback
+            const rooms = await Room.find({ roomNumber: { $regex: q, $options: "i" } }).select("_id");
+            filter.$or = [{ room: { $in: rooms.map(r => r._id) } }];
+        }
+
+        const [total, docs] = await Promise.all([
+            Book.countDocuments(filter),
+            Book.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate("user", "name email").populate("room", "roomNumber roomType price status")
+        ]);
+        res.status(200).json({ total, data: docs, page, limit });
+    } catch (error) {
+        console.error("getBookings error", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+const getBooking = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const doc = await Book.findById(id).populate("user", "name email").populate("room", "roomNumber roomType price status");
+        if (!doc) return res.status(404).json({ message: "Booking not found" });
+        res.status(200).json({ data: doc });
+    } catch (error) {
+        console.error("getBooking error", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+const updateBooking = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const payload = req.body;
+
+        const booking = await Book.findById(id);
+        if (!booking) return res.status(404).json({ message: "Booking not found" });
+
+        // if room change, update old room status and new room status
+        if (payload.roomId && String(payload.roomId) !== String(booking.room)) {
+            const newRoom = await Room.findById(payload.roomId);
+            if (!newRoom || newRoom.status !== "available") {
+                return res.status(400).json({ message: "Target room not available" });
+            }
+            const oldRoom = await Room.findById(booking.room);
+            if (oldRoom) { oldRoom.status = "available"; await oldRoom.save(); }
+            newRoom.status = "booked"; await newRoom.save();
+            booking.room = newRoom._id;
+        }
+
+        if (payload.status) booking.status = payload.status;
+        if (payload.checkIn) booking.checkIn = payload.checkIn;
+        if (payload.checkOut) booking.checkOut = payload.checkOut;
+        if (payload.maxOccupancy) booking.maxOccupancy = payload.maxOccupancy;
+
+        await booking.save();
+        res.status(200).json({ message: "Booking updated", booking });
+    } catch (error) {
+        console.error("updateBooking error", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+const deleteBooking = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const booking = await Book.findById(id);
+        if (!booking) return res.status(404).json({ message: "Booking not found" });
+
+        const room = await Room.findById(booking.room);
+        if (room) { room.status = "available"; await room.save(); }
+        await booking.remove();
+
+        res.status(200).json({ message: "Booking deleted" });
+    } catch (error) {
+        console.error("deleteBooking error", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
 
 module.exports = {
-    createBooking
-}
+    createBooking,
+    getBookings,
+    getBooking,
+    updateBooking,
+    deleteBooking
+};
