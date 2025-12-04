@@ -7,10 +7,13 @@ const app = express();
 dotenv.config();
 
 // Middleware
+const CLIENT_URL = process.env.CLIENT_URL || "https://luxora-hotal.vercel.app";
 app.use(cors({
-    origin: "*"
-}
-));
+    origin: CLIENT_URL,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Accept", "X-Requested-With"]
+}));
 app.use(express.json());
 
 // Database connection
