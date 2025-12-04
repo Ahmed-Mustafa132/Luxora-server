@@ -1,37 +1,36 @@
-const express = require('express');
-const dotenv = require('dotenv');
-const cors = require('cors');
-const mongoose = require('mongoose');
+const express = require("express");
+const dotenv = require("dotenv");
+const cors = require("cors");
+const mongoose = require("mongoose");
 
 const app = express();
 dotenv.config();
-app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
-    credentials: true,
-    optionsSuccessStatus: 200
-}
 
-));
-
+// Middleware
+app.use(cors());
 app.use(express.json());
 
+// Database connection
+mongoose
+    .connect(process.env.MONGO_URI)
+    .then(() => console.log("✅ MongoDB connected"))
+    .catch((err) => console.error("❌ MongoDB error:", err));
 
-// import routes
-const userRoutes = require('./routes/user');
-const bookRoutes = require('./routes/book')
-const roomRoutes = require('./routes/room')
+// Routes
+app.use("/api/room", require("./routes/room"));
+app.use("/api/user", require("./routes/user"));
+app.use("/api/book", require("./routes/book"));
 
+// Error handling
+app.use((err, req, res, next) => {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+});
 
-app.use('/api/user', userRoutes);
-app.use('/api/book', bookRoutes)
-app.use('/api/room', roomRoutes)
+// Start server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+});
 
-// connect to mongoDB
-mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log('Connected to MongoDB'))
-    .catch((err) => console.error('MongoDB connection error:', err));
-
-app.listen(process.env.PORT || 3000, () => {
-    console.log(`Server is running on port ${process.env.PORT}`);
-    console.log(`http://localhost:${process.env.PORT || 3000}`);
-})
+module.exports = app;
