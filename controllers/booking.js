@@ -38,7 +38,7 @@ const createBooking = async (req, res) => {
             checkIn,
             checkOut,
             maxOccupancy: guests,
-            status: req.body.status || "confirmed"
+            status: req.body.status || "booked"
         });
         await newBooking.save();
 
@@ -141,10 +141,80 @@ const deleteBooking = async (req, res) => {
     }
 };
 
+const getBookingsByRoom = async (req, res) => {
+    try {
+        const { roomId } = req.params;
+        if (!roomId) return res.status(400).json({ message: "roomId is required" });
+
+        // validate ObjectId
+        if (!mongoose.Types.ObjectId.isValid(roomId)) {
+            return res.status(400).json({ message: "Invalid roomId" });
+        }
+
+        // optional query params
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+        const skip = (page - 1) * limit;
+
+        const filter = { room: roomId };
+        if (req.query.status) filter.status = req.query.status;
+
+        const [total, docs] = await Promise.all([
+            Book.countDocuments(filter),
+            Book.find(filter,)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .populate("room", "roomNumber roomType price status")
+                .populate("user", "name email")
+        ]);
+        console.log(docs)
+
+        return res.status(200).json({ total, page, limit, data: docs });
+    } catch (error) {
+        console.error("getBookingsByRoom error", error);
+        return res.status(500).json({ message: "Server error" });
+    }
+};
+
+const getBookingsByUser = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        if (!userId) return res.status(400).json({ message: "userId is required" });
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ message: "Invalid userId" });
+        }
+
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+        const skip = (page - 1) * limit;
+
+        const filter = { user: userId };
+        if (req.query.status) filter.status = req.query.status;
+
+        const [total, docs] = await Promise.all([
+            Book.countDocuments(filter),
+            Book.find(filter)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .populate("user", "name email")
+                .populate("room", "roomNumber roomType price status")
+        ]);
+
+        return res.status(200).json({ total, page, limit, data: docs });
+    } catch (error) {
+        console.error("getBookingsByUser error", error);
+        return res.status(500).json({ message: "Server error" });
+    }
+};
+
 module.exports = {
     createBooking,
     getBookings,
     getBooking,
     updateBooking,
-    deleteBooking
+    deleteBooking,
+    getBookingsByRoom,
+    getBookingsByUser,
 };

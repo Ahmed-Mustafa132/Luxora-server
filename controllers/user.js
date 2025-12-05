@@ -105,7 +105,6 @@ const updateCorrentUser = async (req, res) => {
       email: update.email,
       role: update.role
     }
-
     res.status(200).json({ message: "User updated successfully", data });
   } catch (error) {
     console.log("errer update user by id", error);
@@ -114,25 +113,51 @@ const updateCorrentUser = async (req, res) => {
 };
 const getUserById = async (req, res) => {
   try {
-    const { id } = req.params
-    const userData = await User.findById(id, ["name", "email", "role",]);
-    data = {
+    const { id } = req.params;
+    const userData = await User.findById(id, ["name", "email", "role"]);
+    if (!userData) return res.status(404).json({ message: "User not found" });
+    const data = {
+      id: userData._id,
       name: userData.name,
       email: userData.email,
       role: userData.role,
-    }
+    };
     res.status(200).json({ message: "get user success", data });
   } catch (error) {
-    console.log("error on get user by id", error)
+    console.log("error on get user by id", error);
+    res.status(500).json({ message: "Server error" });
   }
-}
+};
+
+// Admin: change user's role (promote/demote)
+const updateUserRole = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+    if (!id || !role) return res.status(400).json({ message: "id and role are required" });
+    if (!["user", "receptionist", "admin"].includes(role)) return res.status(400).json({ message: "Invalid role" });
+
+    const updated = await User.findByIdAndUpdate(id, { role }, { new: true }).select("name email role");
+    if (!updated) return res.status(404).json({ message: "User not found" });
+    res.status(200).json({ message: "User role updated", data: updated });
+  } catch (error) {
+    console.error("updateUserRole error", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Admin: delete user by id (use params.id). Keep /me for self-delete.
 const deleteUserById = async (req, res) => {
   try {
-    const { id } = req.user;
-    await User.findByIdAndDelete(id);
+    const { id } = req.params; // admin deletes target user
+    if (!id) return res.status(400).json({ message: "id is required" });
+
+    const deleted = await User.findByIdAndDelete(id);
+    if (!deleted) return res.status(404).json({ message: "User not found" });
+
     res.status(200).json({ message: "User deleted successfully" });
   } catch (error) {
-    console.log("errer delete user by id", error);
+    console.log("error delete user by id", error);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -143,5 +168,7 @@ module.exports = {
   getAllUsers,
   getCorrentUser,
   updateCorrentUser,
-  getUserById, deleteUserById
+  getUserById,
+  updateUserRole, // added
+  deleteUserById
 };

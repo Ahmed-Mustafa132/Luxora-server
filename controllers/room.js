@@ -111,9 +111,45 @@ const updateRoom = async (req, res) => {
   }
 };
 
+const getRoomById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ message: "id is required" });
+    const room = await Room.findById(id, [
+      "roomNumber",
+      "price",
+      "amenities",
+      "roomType",
+      "status",
+      "rating",
+    ]);
+    if (!room) return res.status(404).json({ message: "Room not found" });
+    return res.status(200).json({ room });
+  } catch (error) {
+    return res.status(500).json({ message: "Error fetching room", error: error.message });
+  }
+};
+
+const restoreRoom = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const room = await Room.findById(id);
+    if (!room) return res.status(404).json({ message: "Room not found" });
+
+    // set status to available (adjust if your app uses a different "deleted" flag)
+    room.status = "available";
+    await room.save();
+    return res.status(200).json({ message: "Room restored", room });
+  } catch (error) {
+    return res.status(500).json({ message: "Error restoring room", error: error.message });
+  }
+};
+
 module.exports = {
   createRoom,
   getRooms,
   getRoom,
+  getRoomById,
   updateRoom,
+  restoreRoom,
 };

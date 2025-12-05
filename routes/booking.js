@@ -6,19 +6,17 @@ const {
     getBooking,
     updateBooking,
     deleteBooking,
+    getBookingsByRoom,
+    getBookingsByUser
 } = require("../controllers/booking");
 const { isAuth, isAdmin } = require("../middlewares/auth");
 
-// User create booking
-router.post("/book", isAuth, createBooking);
-
-// Admin routes - list & manage
+router.post("/booking", isAuth, createBooking);
 router.get("/", isAuth, isAdmin, getBookings);
 router.get("/:id", isAuth, isAdmin, getBooking);
 router.put("/:id", isAuth, isAdmin, updateBooking);
 router.delete("/:id", isAuth, isAdmin, deleteBooking);
-
-// Optional admin create (accepts userId/roomId)
-router.post("/admin-create", isAuth, isAdmin, createBooking);
+router.get("/room/:roomId", isAuth, isAdmin, getBookingsByRoom);
+router.get("/user/:userId", isAuth, isAdmin, getBookingsByUser);
 
 module.exports = router;

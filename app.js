@@ -7,7 +7,7 @@ const app = express();
 dotenv.config();
 
 // Middleware
-const CLIENT_URL = process.env.CLIENT_URL || "https://luxora-hotal.vercel.app";
+const CLIENT_URL = process.env.CLIENT_URL;
 app.use(cors({
     origin: CLIENT_URL,
     credentials: true,

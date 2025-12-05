@@ -5,7 +5,9 @@ const {
   getAllUsers,
   getCorrentUser,
   deleteUserById,
-  updateCorrentUser, getUserById
+  updateCorrentUser,
+  getUserById,
+  updateUserRole
 } = require("../controllers/user");
 const { isAuth, isAdmin } = require("../middlewares/auth");
 const router = Router();
@@ -15,7 +17,10 @@ router.post("/register", register);
 router.post("/login", login);
 router.get("/me", isAuth, getCorrentUser);
 router.put("/me", isAuth, updateCorrentUser);
-router.get("/user/:id", isAdmin, getUserById)
-router.get("/", isAdmin, getAllUsers);
+
+router.get("/:id", isAdmin, getUserById);
+router.put("/:id/role", isAdmin, updateUserRole);
 router.delete("/:id", isAdmin, deleteUserById);
+
+router.get("/", isAdmin, getAllUsers);
 module.exports = router;

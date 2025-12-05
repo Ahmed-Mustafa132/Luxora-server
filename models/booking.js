@@ -13,6 +13,19 @@ const bookSchema = new mongoose.Schema({
     maxOccupancy: {
         type: Number,
         required: true
+    },
+    checkIn: {
+        type: Date,
+        required: true
+    },
+    checkOut: {
+        type: Date,
+        required: true
+    },
+    status: {
+        type: String,
+        enum: ["booked", "checked-in", "checked-out", "cancelled"],
+        default: "booked"
     }
 }, { timestamps: true })
 module.exports = mongoose.model("Book", bookSchema)
