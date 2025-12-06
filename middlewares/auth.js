@@ -44,8 +44,6 @@ const isReceptionist = async (req, res, next) => {
 }
 const isAdmin = async (req, res, next) => {
     const token = req.headers.authorization;
-    console.log(token);
-    console.log(req.headers);
     if (!token) {
         return res.status(401).json({ message: "Unauthorized" });
     }
@@ -55,7 +53,6 @@ const isAdmin = async (req, res, next) => {
             return res.status(401).json({ message: "Unauthorized" });
         }
         const user = await User.findById(decoded.id);
-        console.log(user);
         if (!user || user.role !== 'admin') {
             return res.status(403).json({ message: "access dentine" });
         }

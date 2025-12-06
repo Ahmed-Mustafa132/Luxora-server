@@ -1,4 +1,6 @@
 const User = require("../models/user");
+const Booking = require("../models/booking");
+const Room = require("../models/room");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 // Register a new user
@@ -161,6 +163,17 @@ const deleteUserById = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+const dashboard = async (req, res) => {
+  try {
+    const users = await User.countDocuments({})
+    const bookings = await Booking.countDocuments({})
+    const rooms = await Room.countDocuments({})
+    res.status(200).json({ massage: "Dashboard data retrieved successfully", data: { users, bookings, rooms } });
+  } catch (error) {
+    console.log("error on get dashboard data", error);
+
+  }
+}
 
 module.exports = {
   register,
@@ -169,6 +182,7 @@ module.exports = {
   getCorrentUser,
   updateCorrentUser,
   getUserById,
-  updateUserRole, // added
-  deleteUserById
+  updateUserRole,
+  deleteUserById,
+  dashboard
 };

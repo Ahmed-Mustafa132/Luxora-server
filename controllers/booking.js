@@ -82,12 +82,27 @@ const getBookings = async (req, res) => {
 const getBooking = async (req, res) => {
     try {
         const { id } = req.params;
-        const doc = await Book.findById(id).populate("user", "name email").populate("room", "roomNumber roomType price status");
-        if (!doc) return res.status(404).json({ message: "Booking not found" });
-        res.status(200).json({ data: doc });
+        if (!id) return res.status(400).json({ message: "id is required" });
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "Invalid id" });
+        }
+
+        const booking = await Book.findById(id)
+            .populate("user", "name email role")
+            .populate("room", "roomNumber roomType price status amenities");
+
+        if (!booking) return res.status(404).json({ message: "Booking not found" });
+
+        // If your logic should allow users to fetch only their bookings:
+        // const requester = req.user;
+        // if (requester?.role !== "admin" && String(booking.user._id) !== String(requester._id)) {
+        //   return res.status(403).json({ message: "Forbidden" });
+        // }
+
+        return res.status(200).json({ data: booking });
     } catch (error) {
         console.error("getBooking error", error);
-        res.status(500).json({ message: "Server error" });
+        return res.status(500).json({ message: "Server error" });
     }
 };
 
@@ -124,6 +139,44 @@ const updateBooking = async (req, res) => {
     }
 };
 
+const cancelBooking = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const requester = req.user;
+        if (!id) return res.status(400).json({ message: "id is required" });
+
+        const booking = await Book.findById(id);
+        if (!booking) return res.status(404).json({ message: "Booking not found" });
+
+        // allow owner or admin to cancel
+        if (!(requester && (requester.role === "admin" || String(requester._id) === String(booking.user)))) {
+            return res.status(403).json({ message: "Forbidden" });
+        }
+
+        if (booking.status === "cancelled") {
+            return res.status(200).json({ message: "Booking already cancelled", booking });
+        }
+
+        booking.status = "cancelled";
+        await booking.save();
+
+        // free up room if exists
+        if (booking.room) {
+            const room = await Room.findById(booking.room);
+            if (room) {
+                room.status = "available";
+                await room.save();
+            }
+        }
+
+        return res.status(200).json({ message: "Booking cancelled", booking });
+    } catch (error) {
+        console.error("cancelBooking error", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+// keep admin delete (hard delete)
 const deleteBooking = async (req, res) => {
     try {
         const { id } = req.params;
@@ -214,7 +267,8 @@ module.exports = {
     getBookings,
     getBooking,
     updateBooking,
+    cancelBooking,
     deleteBooking,
     getBookingsByRoom,
-    getBookingsByUser,
+    getBookingsByUser
 };
