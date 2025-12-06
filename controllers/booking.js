@@ -262,6 +262,31 @@ const getBookingsByUser = async (req, res) => {
     }
 };
 
+const getMyBookings = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        if (!userId) return res.status(400).json({ message: "User not found" });
+
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+        const skip = (page - 1) * limit;
+
+        const [total, docs] = await Promise.all([
+            Book.countDocuments({ user: userId }),
+            Book.find({ user: userId })
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .populate("room", "roomNumber roomType price status")
+        ]);
+
+        return res.status(200).json({ total, page, limit, data: docs });
+    } catch (error) {
+        console.error("getMyBookings error", error);
+        return res.status(500).json({ message: "Server error" });
+    }
+};
+
 module.exports = {
     createBooking,
     getBookings,
@@ -270,5 +295,6 @@ module.exports = {
     cancelBooking,
     deleteBooking,
     getBookingsByRoom,
-    getBookingsByUser
+    getBookingsByUser,
+    getMyBookings
 };
